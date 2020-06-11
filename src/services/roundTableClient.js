@@ -1,8 +1,11 @@
 import React, { useRef, useEffect } from "react";
 import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
+import server from "../configs/server";
 
-const _socket = io("http://localhost:5000");
+const url = server({ mode: "online" });
+
+const _socket = io(url);
 let _webRtcPeers = {};
 let _onParticipantJoined = null;
 let _onParticipantLeft = null;
