@@ -7,7 +7,7 @@ const url = server({ mode: "online" });
 
 const _socket = io(url);
 let _webRtcPeers = {};
-let _localVideo = null;
+let _localVideoRef = null;
 let _onServerConnected = null;
 let _onMeetingStarted = null;
 let _onMeetingStopped = null;
@@ -133,9 +133,8 @@ const _knightLeft = (message) => {
 const join = ({ seatNumber, name }) => {
   if (!seatNumber) return;
 
-  // local TODO
   const options = {
-    localVideo: _localVideo,
+    localVideo: _localVideoRef.current,
     onIceCandidate: (candidate) =>
       _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
   };
@@ -160,9 +159,8 @@ const leave = () => {
 };
 
 const reserve = ({ numberOfSeats, name }) => {
-  // local TODO
   const options = {
-    localVideo: _localVideo,
+    localVideo: _localVideoRef.current,
     onIceCandidate: (candidate) =>
       _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
   };
@@ -195,7 +193,7 @@ export const useRoundTable = ({
   onMeetingStarted,
   onMeetingStopped,
   onSourceChanged,
-  localVideo,
+  localVideoRef,
 }) => {
   useEffect(() => {
     if (typeof onKnightJoined === "function") _onKnightJoined = onKnightJoined;
@@ -207,14 +205,14 @@ export const useRoundTable = ({
     if (typeof onSourceChanged === "function")
       _onSourceChanged = onSourceChanged;
 
-    if (localVideo) _localVideo = localVideo;
+    if (localVideoRef) _localVideoRef = localVideoRef;
   }, [
     onKnightJoined,
     onKnightLeft,
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,
-    localVideo,
+    localVideoRef,
   ]);
 
   return { join, leave, reserve, release, changeSource };

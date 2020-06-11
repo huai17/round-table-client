@@ -15,7 +15,7 @@ const App = () => {
   const [table, setTable] = useState(null);
 
   const [isStarting, setIsStarting] = useState(false);
-  const localVideoRef = useRef();
+  const localVideoRef = useRef(null);
 
   const onMeetingStarted = useCallback((self, table) => {
     setTable(table);
@@ -66,7 +66,7 @@ const App = () => {
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,
-    localVideo: localVideoRef.current,
+    localVideoRef: localVideoRef,
   });
 
   const handleChangeSource = (source) => {
@@ -101,11 +101,10 @@ const App = () => {
             />
           )}
         </div>
-
+        <video autoPlay muted ref={localVideoRef} />
         <div>
           {isStarting ? (
             <>
-              <video autoPlay muted ref={localVideoRef} />
               <Video key={"composite"} source={"composite"} />
               <Video key={"dispatcher"} source={"dispatcher"} />
             </>
