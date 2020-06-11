@@ -1,165 +1,119 @@
-import React, { useState, useCallback } from "react";
-
+import React, { useState, useCallback, useRef } from "react";
+import { Container } from "semantic-ui-react";
 import { Video, useRoundTable } from "./services/roundTableClient";
 
-const renderVideos = (sources) =>
-  sources.map((source) => <Video key={source} source={source} />);
+import StartPanel from "./components/StartPanel";
+import TableControl from "./components/TableControl";
+
+const renderVideos = (knights) =>
+  knights.map((knight) => <Video key={knight.id} source={knight.id} />);
 
 const App = () => {
-  const [sources, setSources] = useState([]);
-  const [token, setToken] = useState("");
+  const [source, setSource] = useState(null);
+  const [self, setSelf] = useState(null);
+  const [knights, setKnights] = useState([]);
   const [table, setTable] = useState(null);
-  const [host, setHost] = useState(null);
-  const [isStarting, setIsStarting] = useState(false);
 
-  const onMeetingStarted = useCallback(() => {
+  const [isStarting, setIsStarting] = useState(false);
+  const localVideoRef = useRef();
+
+  const onMeetingStarted = useCallback((self, table) => {
+    setTable(table);
+    setSelf(self);
+    setSource(table.source);
+    setKnights((knights) => {
+      const newKnights = knights.concat();
+      for (let key in table.knights) {
+        if (self.id !== key) newKnights.push(table.knights[key]);
+      }
+      return newKnights;
+    });
     setIsStarting(true);
   }, []);
 
   const onMeetingStopped = useCallback(() => {
     setIsStarting(false);
     setTable(null);
-    setToken("");
-    setSources([]);
+    setSelf(null);
+    setSource(null);
+    setKnights([]);
   }, []);
 
-  const onSourceChanged = useCallback((hostId) => {
-    setHost(hostId);
-  }, []);
-
-  const onTableReserved = useCallback((table) => {
-    setTable(table);
-    setHost(table.host);
-  }, []);
-
-  const onParticipantJoined = useCallback((sources) => {
-    setSources((_sources) => {
-      const set = new Set(_sources);
-      sources.forEach(set.add, set);
-      return Array.from(set);
+  const onKnightJoined = useCallback((knight) => {
+    setKnights((knights) => {
+      if (knights.find((_knight) => _knight.id === knight.id)) return knights;
+      return [...knights, knight];
     });
   }, []);
 
-  const onParticipantLeft = useCallback((sources) => {
-    setSources((_sources) => {
-      const set = new Set(_sources);
-      sources.forEach(set.delete, set);
-      return Array.from(set);
+  const onKnightLeft = useCallback((knight) => {
+    setKnights((knights) => {
+      const index = knights.findIndex((_knight) => _knight.id === knight.id);
+      if (index === -1) return knights;
+      const newKnights = knights.concat();
+      newKnights.splice(index, 1);
+      return newKnights;
     });
   }, []);
 
-  const { join, leave, reserve, release, changeSource } = useRoundTable({
-    onParticipantJoined,
-    onParticipantLeft,
-    onTableReserved,
+  const onSourceChanged = useCallback((source) => {
+    setSource(source);
+  }, []);
+
+  const { join, leave, reserve, changeSource } = useRoundTable({
+    onKnightJoined,
+    onKnightLeft,
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,
+    localVideo: localVideoRef.current,
   });
 
+  const handleChangeSource = (source) => {
+    changeSource(source);
+  };
+
+  const handleLeave = () => {
+    leave();
+  };
+
   return (
-    <div>
+    <Container>
       <div>
-        {!isStarting ? (
-          <div>
-            <div>
-              <button
-                onClick={() => {
-                  reserve({});
-                }}
-              >
-                Reserve Table
-              </button>
-            </div>
-            <div>OR</div>
-            <div>
-              <input
-                onChange={(event) => setToken(event.target.value)}
-                value={token}
-              />
-              <button
-                onClick={() => {
-                  join({ token });
-                }}
-              >
-                Join
-              </button>
-            </div>
-          </div>
-        ) : table ? (
-          <div>
-            <div>
-              <div>Tokens:</div>
-              <div>
-                {table.seats.map((seatNumber) => (
-                  <div key={seatNumber}>{seatNumber}</div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div>Participants:</div>
-              <button
-                onClick={() => {
-                  changeSource("me");
-                }}
-              >
-                Get Back Host
-              </button>
-              <div>
-                {sources.map((source) => (
-                  <div key={source}>
-                    <button
-                      onClick={() => {
-                        changeSource(source);
-                      }}
-                    >
-                      Change Host
-                    </button>{" "}
-                    {source} - {host === source ? "HOST" : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                release();
+        <div>
+          {!isStarting ? (
+            <StartPanel
+              handleReserveTable={() => {
+                reserve({});
               }}
-            >
-              Release Table
-            </button>
-          </div>
-        ) : (
-          <div>
-            <div>
-              <div>Participants:</div>
-              <div>
-                {sources.map((source) => (
-                  <div key={source}>
-                    {source} - {host === source ? "HOST" : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                leave();
+              handleJoinTable={(seatNumber) => {
+                join({ seatNumber });
               }}
-            >
-              Leave Table
-            </button>
-          </div>
-        )}
+            />
+          ) : (
+            <TableControl
+              handleChangeSource={handleChangeSource}
+              handleLeave={handleLeave}
+              source={source}
+              self={self}
+              knights={knights}
+              table={table}
+            />
+          )}
+        </div>
+
+        <div>
+          {isStarting ? (
+            <>
+              <video autoPlay muted ref={localVideoRef} />
+              <Video key={"composite"} source={"composite"} />
+              <Video key={"dispatcher"} source={"dispatcher"} />
+            </>
+          ) : null}
+        </div>
+        <div>{renderVideos(knights)}</div>
       </div>
-      <div>
-        {isStarting ? (
-          <>
-            <Video key={"composite"} source={"composite"} />
-            <Video key={"dispatcher"} source={"dispatcher"} />
-          </>
-        ) : null}
-      </div>
-      <div>{renderVideos(sources)}</div>
-    </div>
+    </Container>
   );
 };
 

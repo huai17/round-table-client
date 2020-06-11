@@ -7,19 +7,22 @@ const url = server({ mode: "online" });
 
 const _socket = io(url);
 let _webRtcPeers = {};
-let _onParticipantJoined = null;
-let _onParticipantLeft = null;
-let _onTableReserved = null;
+let _localVideo = null;
+let _onServerConnected = null;
 let _onMeetingStarted = null;
 let _onMeetingStopped = null;
+let _onKnightJoined = null;
+let _onKnightLeft = null;
 let _onSourceChanged = null;
+
+_socket.on("connect", () => {
+  if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
+});
 
 _socket.on("message", (message) => {
   console.log(`Receive message: ${message.id}`);
+
   switch (message.id) {
-    // case "getRoomsResponse":
-    //   getRoomsResponse(message);
-    //   break;
     case "reserveResponse":
       _reserveResponse(message);
       break;
@@ -32,14 +35,11 @@ _socket.on("message", (message) => {
     case "stopCommunication":
       _dispose();
       break;
-    case "participantJoined":
-      _participantJoined(message);
+    case "knightJoined":
+      _knightJoined(message);
       break;
-    case "participantLeft":
-      _participantLeft(message);
-      break;
-    case "existParticipants":
-      _existParticipants(message);
+    case "knightLeft":
+      _knightLeft(message);
       break;
     case "changeSource":
       _changeSource(message);
@@ -58,9 +58,11 @@ _socket.on("message", (message) => {
 const _setPeer = ({ source, webRtcPeer }) => {
   _webRtcPeers[source] = webRtcPeer;
 };
+
 const _sendMessage = (message) => {
   _socket.send(message);
 };
+
 const _disposePeer = (source) => {
   if (_webRtcPeers[source]) {
     _webRtcPeers[source].dispose();
@@ -75,7 +77,7 @@ const _dispose = () => {
       delete _webRtcPeers[source];
     }
   }
-  _onMeetingStopped();
+  if (typeof _onMeetingStopped === "function") _onMeetingStopped();
   _webRtcPeers = {};
 };
 
@@ -90,9 +92,8 @@ const _reserveResponse = (message) => {
     _dispose();
   } else {
     _webRtcPeers["me"].processAnswer(message.sdpAnswer);
-    // _onParticipantJoined(["composite", "dispatcher"]);
-    _onTableReserved(message.table);
-    _onMeetingStarted();
+    if (typeof _onMeetingStarted === "function")
+      _onMeetingStarted(message.self, message.table);
   }
 };
 
@@ -103,8 +104,8 @@ const _joinResponse = (message) => {
     _dispose();
   } else {
     _webRtcPeers["me"].processAnswer(message.sdpAnswer);
-    // _onParticipantJoined(["composite", "dispatcher"]);
-    _onMeetingStarted();
+    if (typeof _onMeetingStarted === "function")
+      _onMeetingStarted(message.self, message.table);
   }
 };
 
@@ -118,22 +119,23 @@ const _receiveResponse = (message) => {
   }
 };
 
-const _participantJoined = (message) => {
-  _onParticipantJoined([message.participantId]);
-};
-const _participantLeft = (message) => {
-  _onParticipantLeft([message.participantId]);
+const _changeSource = (message) => {
+  if (typeof _onSourceChanged === "function") _onSourceChanged(message.source);
 };
 
-const _existParticipants = (message) => {
-  _onParticipantJoined(message.participantIds);
-  _onSourceChanged(message.hostId);
+const _knightJoined = (message) => {
+  if (typeof _onKnightJoined === "function") _onKnightJoined(message.knight);
+};
+const _knightLeft = (message) => {
+  if (typeof _onKnightLeft === "function") _onKnightLeft(message.knight);
 };
 
-const join = ({ token, name }) => {
-  if (!token) return;
+const join = ({ seatNumber, name }) => {
+  if (!seatNumber) return;
 
+  // local TODO
   const options = {
+    localVideo: _localVideo,
     onIceCandidate: (candidate) =>
       _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
   };
@@ -146,7 +148,7 @@ const join = ({ token, name }) => {
         if (error) return console.error(error);
 
         console.info("Invoking SDP offer callback function ");
-        _sendMessage({ id: "join", token, name, sdpOffer });
+        _sendMessage({ id: "join", seatNumber, name, sdpOffer });
       });
     }
   );
@@ -158,7 +160,9 @@ const leave = () => {
 };
 
 const reserve = ({ numberOfSeats, name }) => {
+  // local TODO
   const options = {
+    localVideo: _localVideo,
     onIceCandidate: (candidate) =>
       _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
   };
@@ -185,51 +189,38 @@ const changeSource = (source) => {
   _sendMessage({ id: "changeSource", source });
 };
 
-const _changeSource = (message) => {
-  _onSourceChanged(message.source);
-};
-
 export const useRoundTable = ({
-  onParticipantJoined,
-  onParticipantLeft,
-  onTableReserved,
+  onKnightJoined,
+  onKnightLeft,
   onMeetingStarted,
   onMeetingStopped,
   onSourceChanged,
+  localVideo,
 }) => {
   useEffect(() => {
-    if (typeof onParticipantJoined === "function")
-      _onParticipantJoined = onParticipantJoined;
-    else throw Error("onParticipantJoined must be a function");
-    if (typeof onParticipantLeft === "function")
-      _onParticipantLeft = onParticipantLeft;
-    else throw Error("onParticipantLeft must be a function");
-    if (typeof onTableReserved === "function")
-      _onTableReserved = onTableReserved;
-    else throw Error("onTableReserved must be a function");
+    if (typeof onKnightJoined === "function") _onKnightJoined = onKnightJoined;
+    if (typeof onKnightLeft === "function") _onKnightLeft = onKnightLeft;
     if (typeof onMeetingStarted === "function")
       _onMeetingStarted = onMeetingStarted;
-    else throw Error("onMeetingStarted must be a function");
     if (typeof onMeetingStopped === "function")
       _onMeetingStopped = onMeetingStopped;
-    else throw Error("onMeetingStopped must be a function");
-
     if (typeof onSourceChanged === "function")
       _onSourceChanged = onSourceChanged;
-    else throw Error("onSourceChanged must be a function");
+
+    if (localVideo) _localVideo = localVideo;
   }, [
-    onParticipantJoined,
-    onParticipantLeft,
-    onTableReserved,
+    onKnightJoined,
+    onKnightLeft,
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,
+    localVideo,
   ]);
 
   return { join, leave, reserve, release, changeSource };
 };
 
-export const Video = ({ source }) => {
+export const Video = ({ source, ...props }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -257,5 +248,5 @@ export const Video = ({ source }) => {
     };
   }, [source]);
 
-  return <video ref={videoRef} autoPlay />;
+  return <video ref={videoRef} autoPlay muted {...props} />;
 };
