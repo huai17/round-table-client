@@ -6,6 +6,10 @@ const _socket = io("http://localhost:5000");
 let _webRtcPeers = {};
 let _onParticipantJoined = null;
 let _onParticipantLeft = null;
+let _onTableReserved = null;
+let _onMeetingStarted = null;
+let _onMeetingStopped = null;
+let _onSourceChanged = null;
 
 _socket.on("message", (message) => {
   console.log(`Receive message: ${message.id}`);
@@ -15,9 +19,6 @@ _socket.on("message", (message) => {
     //   break;
     case "reserveResponse":
       _reserveResponse(message);
-      break;
-    case "releaseResponse":
-      _releaseResponse(message);
       break;
     case "joinResponse":
       _joinResponse(message);
@@ -37,6 +38,9 @@ _socket.on("message", (message) => {
     case "existParticipants":
       _existParticipants(message);
       break;
+    case "changeSource":
+      _changeSource(message);
+      break;
     case "iceCandidate":
       _iceCandidate(message);
       break;
@@ -55,17 +59,20 @@ const _sendMessage = (message) => {
   _socket.send(message);
 };
 const _disposePeer = (source) => {
-  _webRtcPeers[source].dispose();
-  delete _webRtcPeers[source];
+  if (_webRtcPeers[source]) {
+    _webRtcPeers[source].dispose();
+    delete _webRtcPeers[source];
+  }
 };
 
 const _dispose = () => {
   for (let source in _webRtcPeers) {
     if (_webRtcPeers[source]) {
       _webRtcPeers[source].dispose();
-      _webRtcPeers[source] = null;
+      delete _webRtcPeers[source];
     }
   }
+  _onMeetingStopped();
   _webRtcPeers = {};
 };
 
@@ -77,14 +84,13 @@ const _reserveResponse = (message) => {
   if (message.response !== "success") {
     const error = message.error ? message.error : "Unknow error";
     console.info(`Create table failed for the following reason: `, error);
-  } else console.log(message.table);
-};
-
-const _releaseResponse = (message) => {
-  if (message.response !== "success") {
-    const error = message.error ? message.error : "Unknow error";
-    console.info(`Release table failed for the following reason: `, error);
-  } else console.log(message.tableId);
+    _dispose();
+  } else {
+    _webRtcPeers["me"].processAnswer(message.sdpAnswer);
+    // _onParticipantJoined(["composite", "dispatcher"]);
+    _onTableReserved(message.table);
+    _onMeetingStarted();
+  }
 };
 
 const _joinResponse = (message) => {
@@ -94,7 +100,8 @@ const _joinResponse = (message) => {
     _dispose();
   } else {
     _webRtcPeers["me"].processAnswer(message.sdpAnswer);
-    _onParticipantJoined(["composite", "dispatcher"]);
+    // _onParticipantJoined(["composite", "dispatcher"]);
+    _onMeetingStarted();
   }
 };
 
@@ -117,6 +124,7 @@ const _participantLeft = (message) => {
 
 const _existParticipants = (message) => {
   _onParticipantJoined(message.participantIds);
+  _onSourceChanged(message.hostId);
 };
 
 const join = ({ token, name }) => {
@@ -146,15 +154,46 @@ const leave = () => {
   _dispose();
 };
 
-const reserve = (numberOfSeats = 10) => {
-  _sendMessage({ id: "reserve", numberOfSeats });
+const reserve = ({ numberOfSeats, name }) => {
+  const options = {
+    onIceCandidate: (candidate) =>
+      _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
+  };
+
+  _webRtcPeers["me"] = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
+    options,
+    function (error) {
+      if (error) return console.error(error);
+      this.generateOffer((error, sdpOffer) => {
+        if (error) return console.error(error);
+
+        console.info("Invoking SDP offer callback function ");
+        _sendMessage({ id: "reserve", numberOfSeats, name, sdpOffer });
+      });
+    }
+  );
 };
 
-const release = (tableId) => {
-  _sendMessage({ id: "release", tableId });
+const release = () => {
+  _sendMessage({ id: "release" });
 };
 
-export const useRoundTable = ({ onParticipantJoined, onParticipantLeft }) => {
+const changeSource = (source) => {
+  _sendMessage({ id: "changeSource", source });
+};
+
+const _changeSource = (message) => {
+  _onSourceChanged(message.source);
+};
+
+export const useRoundTable = ({
+  onParticipantJoined,
+  onParticipantLeft,
+  onTableReserved,
+  onMeetingStarted,
+  onMeetingStopped,
+  onSourceChanged,
+}) => {
   useEffect(() => {
     if (typeof onParticipantJoined === "function")
       _onParticipantJoined = onParticipantJoined;
@@ -162,9 +201,29 @@ export const useRoundTable = ({ onParticipantJoined, onParticipantLeft }) => {
     if (typeof onParticipantLeft === "function")
       _onParticipantLeft = onParticipantLeft;
     else throw Error("onParticipantLeft must be a function");
-  }, [onParticipantJoined, onParticipantLeft]);
+    if (typeof onTableReserved === "function")
+      _onTableReserved = onTableReserved;
+    else throw Error("onTableReserved must be a function");
+    if (typeof onMeetingStarted === "function")
+      _onMeetingStarted = onMeetingStarted;
+    else throw Error("onMeetingStarted must be a function");
+    if (typeof onMeetingStopped === "function")
+      _onMeetingStopped = onMeetingStopped;
+    else throw Error("onMeetingStopped must be a function");
 
-  return { join, leave, reserve, release };
+    if (typeof onSourceChanged === "function")
+      _onSourceChanged = onSourceChanged;
+    else throw Error("onSourceChanged must be a function");
+  }, [
+    onParticipantJoined,
+    onParticipantLeft,
+    onTableReserved,
+    onMeetingStarted,
+    onMeetingStopped,
+    onSourceChanged,
+  ]);
+
+  return { join, leave, reserve, release, changeSource };
 };
 
 export const Video = ({ source }) => {
