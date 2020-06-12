@@ -93,7 +93,15 @@ const App = () => {
     <Container>
       <div>
         <div>
-          {!table ? (
+          {table ? (
+            <TableControl
+              handleChangeSource={handleChangeSource}
+              handleKickout={handleKickout}
+              handleGenerateSeats={handleGenerateSeats}
+              handleLeave={handleLeave}
+              table={table}
+            />
+          ) : (
             <StartPanel
               handleReserveTable={() => {
                 reserve({});
@@ -102,25 +110,14 @@ const App = () => {
                 join({ seatNumber });
               }}
             />
-          ) : (
-            <TableControl
-              handleChangeSource={handleChangeSource}
-              handleKickout={handleKickout}
-              handleGenerateSeats={handleGenerateSeats}
-              handleLeave={handleLeave}
-              table={table}
-            />
           )}
         </div>
         <video autoPlay muted controls ref={localVideoRef} />
         {table ? (
-          <>
-            <div>
-              <Video key={"composite"} source={"composite"} />
-              <Video key={"dispatcher"} source={"dispatcher"} />
-            </div>
-            <div>{renderVideos(table)}</div>
-          </>
+          <div>
+            <Video key="dispatcher" source="dispatcher" />
+            {renderVideos(table)}
+          </div>
         ) : null}
       </div>
     </Container>
