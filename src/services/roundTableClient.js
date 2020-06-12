@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
 import server from "../configs/server";
 
-const url = server({ mode: "local" });
+const url = server({ mode: "online" });
 
 const _socket = io(url);
 let _webRtcPeers = {};

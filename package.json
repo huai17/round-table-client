@@ -20,7 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "react-scripts build && aws s3 sync build/ s3://knight.liveteach.io --delete && aws cloudfront create-invalidation --distribution-id E1RK92678O37E4 --paths \"/*\""
   },
   "eslintConfig": {
     "extends": "react-app"
