@@ -1,113 +1,152 @@
 import React from "react";
 import { Segment, Button, Header, Icon, List } from "semantic-ui-react";
 
-const renderSeats = (table) =>
-  table.seats ? (
+const renderSeats = ({ table, handleKickout }) => {
+  if (!table.seats) return null;
+
+  const temp = [];
+
+  for (const seatNumber in table.seats) {
+    switch (table.seats[seatNumber]) {
+      case "available":
+        temp.push(
+          <List.Item key={seatNumber} content={`${seatNumber} - available`} />
+        );
+        break;
+      case "removed":
+        temp.push(
+          <List.Item key={seatNumber} content={`${seatNumber} - removed`} />
+        );
+        break;
+      default:
+        temp.push(
+          <List.Item
+            key={seatNumber}
+            content={
+              <>
+                <span>
+                  {seatNumber} - {table.knights[table.seats[seatNumber]].name}
+                </span>
+
+                <Button
+                  onClick={() => handleKickout(seatNumber)}
+                  content="Kick Out"
+                  size="mini"
+                />
+              </>
+            }
+          />
+        );
+    }
+  }
+
+  return (
     <Segment textAlign="left">
       <Header size="small">
         <Icon name="ticket" /> Seat Numbers
       </Header>
-      <List>
-        {table.seats.map((seatNumber) => (
-          <List.Item key={seatNumber} content={seatNumber} />
-        ))}
-      </List>
-    </Segment>
-  ) : null;
-
-const renderKnights = ({
-  self,
-  knights,
-  source,
-  table,
-  isKing,
-  handleChangeSource,
-}) => (
-  <Segment textAlign="left">
-    <Header size="small">
-      <Icon name="users" /> Participants
-    </Header>
-
-    <List>
-      <List.Item
-        key={self.id}
-        icon={table.king.id === self.id ? "chess king" : "chess knight"}
-        content={
-          <>
-            <span style={{ color: self.id === source ? "green" : undefined }}>
-              {self.name}
-            </span>
-            {isKing && self.id !== source ? (
-              <Button
-                onClick={() => handleChangeSource(self.id)}
-                content="Change Source"
-                size="mini"
-              />
-            ) : null}
-          </>
-        }
-      />
-      {knights.map((knight) =>
-        self.id !== knight.id ? (
-          <List.Item
-            key={knight.id}
-            icon={table.king.id === knight.id ? "chess king" : "chess knight"}
-            content={
-              <>
-                <span
-                  style={{ color: knight.id === source ? "green" : undefined }}
-                >
-                  {knight.name}
-                </span>
-                {isKing && knight.id !== source ? (
-                  <Button
-                    onClick={() => handleChangeSource(knight.id)}
-                    content="Change Source"
-                    size="mini"
-                  />
-                ) : null}
-              </>
-            }
-          />
-        ) : null
-      )}
-    </List>
-  </Segment>
-);
-
-const TableControl = ({
-  handleChangeSource,
-  handleLeave,
-  source,
-  self,
-  knights,
-  table,
-}) => {
-  const isKing = self.id === table.king.id;
-
-  return (
-    <Segment textAlign="center" color="teal" inverted>
-      <Header size="huge">
-        <Icon name="chess knight" /> Round Table
-      </Header>
-      <Segment>
-        {renderSeats(table)}
-        {renderKnights({
-          self,
-          knights,
-          source,
-          table,
-          isKing,
-          handleChangeSource,
-        })}
-        <Button
-          onClick={() => handleLeave()}
-          content={isKing ? "Release Table" : "Leave Table"}
-          size="large"
-        />
-      </Segment>
+      <List>{temp}</List>
     </Segment>
   );
 };
+
+const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
+  const temp = [];
+
+  for (const knightId in table.knights) {
+    if (table.self.id !== knightId)
+      temp.push(
+        <List.Item
+          key={knightId}
+          icon={table.king.id === knightId ? "chess king" : "chess knight"}
+          content={
+            <>
+              <span
+                style={{
+                  color: knightId === table.source ? "green" : undefined,
+                }}
+              >
+                {table.knights[knightId].name}
+              </span>
+              {table.self.id === table.king.id && knightId !== table.source ? (
+                <Button
+                  onClick={() => handleChangeSource(knightId)}
+                  content="Change Source"
+                  size="mini"
+                />
+              ) : null}
+            </>
+          }
+        />
+      );
+  }
+
+  return (
+    <Segment textAlign="left">
+      <Header size="small">
+        <Icon name="users" /> Participants
+      </Header>
+
+      <List>
+        <List.Item
+          key={table.self.id}
+          icon={table.king.id === table.self.id ? "chess king" : "chess knight"}
+          content={
+            <>
+              <span
+                style={{
+                  color: table.self.id === table.source ? "green" : undefined,
+                }}
+              >
+                {table.self.name}
+              </span>
+              {table.self.id === table.king.id &&
+              table.self.id !== table.source ? (
+                <Button
+                  onClick={() => handleChangeSource(table.self.id)}
+                  content="Change Source"
+                  size="mini"
+                />
+              ) : null}
+            </>
+          }
+        />
+        {temp}
+      </List>
+    </Segment>
+  );
+};
+
+const TableControl = ({
+  handleChangeSource,
+  handleKickout,
+  handleGenerateSeats,
+  handleLeave,
+  table,
+}) => (
+  <Segment textAlign="center" color="teal" inverted>
+    <Header size="huge">
+      <Icon name="chess knight" /> Round Table
+    </Header>
+    <Segment>
+      {renderSeats({ table, handleKickout })}
+      {renderKnights({ table, handleChangeSource, handleKickout })}
+      {table.self.id === table.king.id ? (
+        <Button
+          onClick={() => handleGenerateSeats()}
+          content="Generate Seat"
+          size="large"
+        />
+      ) : null}
+      <Button
+        onClick={() => handleLeave()}
+        content={
+          table.self.id === table.king.id ? "Release Table" : "Leave Table"
+        }
+        size="large"
+      />
+    </Segment>
+  </Segment>
+);
 
 export default TableControl;

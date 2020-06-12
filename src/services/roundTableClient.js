@@ -1,9 +1,9 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
 import server from "../configs/server";
 
-const url = server({ mode: "online" });
+const url = server({ mode: "local" });
 
 const _socket = io(url);
 let _webRtcPeers = {};
@@ -14,6 +14,7 @@ let _onMeetingStopped = null;
 let _onKnightJoined = null;
 let _onKnightLeft = null;
 let _onSourceChanged = null;
+let _onSeatsUpdated = null;
 
 _socket.on("connect", () => {
   if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
@@ -43,6 +44,9 @@ _socket.on("message", (message) => {
       break;
     case "changeSource":
       _changeSource(message);
+      break;
+    case "seatsUpdated":
+      _seatsUpdated(message);
       break;
     case "iceCandidate":
       _iceCandidate(message);
@@ -123,11 +127,26 @@ const _changeSource = (message) => {
   if (typeof _onSourceChanged === "function") _onSourceChanged(message.source);
 };
 
-const _knightJoined = (message) => {
-  if (typeof _onKnightJoined === "function") _onKnightJoined(message.knight);
+const _seatsUpdated = (message) => {
+  if (typeof _onSeatsUpdated === "function")
+    _onSeatsUpdated({
+      seats: message.seats,
+      numberOfSeats: message.numberOfSeats,
+    });
 };
+
+const _knightJoined = (message) => {
+  if (typeof _onKnightJoined === "function")
+    _onKnightJoined({ knight: message.knight, seatNumber: message.seatNumber });
+};
+
 const _knightLeft = (message) => {
-  if (typeof _onKnightLeft === "function") _onKnightLeft(message.knight);
+  if (typeof _onKnightLeft === "function")
+    _onKnightLeft({
+      knight: message.knight,
+      seatNumber: message.seatNumber,
+      isRemoved: message.isRemoved,
+    });
 };
 
 const join = ({ seatNumber, name }) => {
@@ -179,12 +198,16 @@ const reserve = ({ numberOfSeats, name }) => {
   );
 };
 
-const release = () => {
-  _sendMessage({ id: "release" });
-};
-
 const changeSource = (source) => {
   _sendMessage({ id: "changeSource", source });
+};
+
+const generateSeats = (numberOfSeats) => {
+  _sendMessage({ id: "generateSeats", numberOfSeats });
+};
+
+const kickout = (seatNumber) => {
+  _sendMessage({ id: "kickout", seatNumber });
 };
 
 export const useRoundTable = ({
@@ -193,6 +216,7 @@ export const useRoundTable = ({
   onMeetingStarted,
   onMeetingStopped,
   onSourceChanged,
+  onSeatsUpdated,
   localVideoRef,
 }) => {
   useEffect(() => {
@@ -204,6 +228,7 @@ export const useRoundTable = ({
       _onMeetingStopped = onMeetingStopped;
     if (typeof onSourceChanged === "function")
       _onSourceChanged = onSourceChanged;
+    if (typeof onSeatsUpdated === "function") _onSeatsUpdated = onSeatsUpdated;
 
     if (localVideoRef) _localVideoRef = localVideoRef;
   }, [
@@ -212,20 +237,27 @@ export const useRoundTable = ({
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,
+    onSeatsUpdated,
     localVideoRef,
   ]);
 
-  return { join, leave, reserve, release, changeSource };
+  return {
+    join,
+    leave,
+    reserve,
+    changeSource,
+    generateSeats,
+    kickout,
+  };
 };
 
 export const Video = ({ source, ...props }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
 
-  function playPause() {
-    if (videoRef.current.paused) videoRef.current.play();
-    else videoRef.current.pause();
-  }
+  // function playPause() {
+  //   if (videoRef.current.paused) videoRef.current.play();
+  //   else videoRef.current.pause();
+  // }
 
   useEffect(() => {
     const options = {
