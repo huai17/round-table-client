@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
 import server from "../configs/server";
@@ -219,7 +219,13 @@ export const useRoundTable = ({
 };
 
 export const Video = ({ source, ...props }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
+
+  function playPause() {
+    if (videoRef.current.paused) videoRef.current.play();
+    else videoRef.current.pause();
+  }
 
   useEffect(() => {
     const options = {
@@ -246,5 +252,5 @@ export const Video = ({ source, ...props }) => {
     };
   }, [source]);
 
-  return <video ref={videoRef} autoPlay muted {...props} />;
+  return <video ref={videoRef} autoPlay muted {...props} controls />;
 };

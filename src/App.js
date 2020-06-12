@@ -101,7 +101,7 @@ const App = () => {
             />
           )}
         </div>
-        <video autoPlay muted ref={localVideoRef} />
+        <video autoPlay muted controls ref={localVideoRef} />
         <div>
           {isStarting ? (
             <>
