@@ -14,7 +14,7 @@ let _onSeatsUpdated = null;
 let _onError = null;
 
 // connect with signal server
-const _socket = io(server({ mode: "local" }));
+const _socket = io(server({ debug: "local" }));
 
 _socket.on("connect", () => {
   if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);

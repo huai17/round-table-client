@@ -1,4 +1,6 @@
 export default (options) =>
-  options && options.mode === "local"
+  process.env.NODE_ENV === "production"
+    ? "https://table.liveteach.io"
+    : options && options.debug === "local"
     ? "http://localhost:5000"
     : "https://table.liveteach.io";
