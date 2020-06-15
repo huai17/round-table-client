@@ -1,22 +1,12 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import { Container } from "semantic-ui-react";
-import { Video, useRoundTable } from "./services/roundTableClient";
+import { useRoundTable } from "./services/roundTableClient";
 
 import StartPanel from "./components/StartPanel";
 import TableControl from "./components/TableControl";
 
-const renderVideos = (table) => {
-  const temp = [];
-  for (const knightId in table.knights) {
-    if (table.self.id !== knightId)
-      temp.push(<Video key={knightId} source={knightId} />);
-  }
-  return temp;
-};
-
 const App = () => {
   const [table, setTable] = useState(null);
-  const localVideoRef = useRef(null);
 
   // Round Table listeners
   const onMeetingStarted = useCallback((self, table) => {
@@ -80,7 +70,6 @@ const App = () => {
     onMeetingStopped,
     onSourceChanged,
     onSeatsUpdated,
-    localVideoRef: localVideoRef,
   });
 
   // TableControl handlers
@@ -91,35 +80,24 @@ const App = () => {
 
   return (
     <Container>
-      <div>
-        <div>
-          {table ? (
-            <TableControl
-              handleChangeSource={handleChangeSource}
-              handleKickout={handleKickout}
-              handleGenerateSeats={handleGenerateSeats}
-              handleLeave={handleLeave}
-              table={table}
-            />
-          ) : (
-            <StartPanel
-              handleReserveTable={() => {
-                reserve({});
-              }}
-              handleJoinTable={(seatNumber) => {
-                join({ seatNumber });
-              }}
-            />
-          )}
-        </div>
-        <video autoPlay muted controls ref={localVideoRef} />
-        {table ? (
-          <div>
-            <Video key="dispatcher" source="dispatcher" />
-            {renderVideos(table)}
-          </div>
-        ) : null}
-      </div>
+      {table ? (
+        <TableControl
+          handleChangeSource={handleChangeSource}
+          handleKickout={handleKickout}
+          handleGenerateSeats={handleGenerateSeats}
+          handleLeave={handleLeave}
+          table={table}
+        />
+      ) : (
+        <StartPanel
+          handleReserveTable={() => {
+            reserve({});
+          }}
+          handleJoinTable={(seatNumber) => {
+            join({ seatNumber });
+          }}
+        />
+      )}
     </Container>
   );
 };

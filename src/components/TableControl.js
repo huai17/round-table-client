@@ -1,5 +1,15 @@
 import React from "react";
 import { Segment, Button, Header, Icon, List } from "semantic-ui-react";
+import { Video } from "../services/roundTableClient";
+
+const renderVideos = (table) => {
+  const temp = [];
+  for (const knightId in table.knights) {
+    if (table.self.id !== knightId)
+      temp.push(<Video key={knightId} source={knightId} />);
+  }
+  return temp;
+};
 
 const renderSeats = ({ table, handleKickout }) => {
   if (!table.seats) return null;
@@ -145,6 +155,11 @@ const TableControl = ({
         }
         size="large"
       />
+      <Segment>
+        <Video key="me" source="me" />
+        <Video key="dispatcher" source="dispatcher" />
+        {renderVideos(table)}
+      </Segment>
     </Segment>
   </Segment>
 );

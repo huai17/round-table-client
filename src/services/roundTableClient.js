@@ -3,11 +3,7 @@ import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
 import server from "../configs/server";
 
-const url = server({ mode: "online" });
-
-const _socket = io(url);
 let _webRtcPeers = {};
-let _localVideoRef = null;
 let _onServerConnected = null;
 let _onMeetingStarted = null;
 let _onMeetingStopped = null;
@@ -15,6 +11,10 @@ let _onKnightJoined = null;
 let _onKnightLeft = null;
 let _onSourceChanged = null;
 let _onSeatsUpdated = null;
+let _onError = null;
+
+// connect with signal server
+const _socket = io(server({ mode: "local" }));
 
 _socket.on("connect", () => {
   if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
@@ -24,47 +24,79 @@ _socket.on("message", (message) => {
   console.log(`Receive message: ${message.id}`);
 
   switch (message.id) {
-    case "reserveResponse":
-      _reserveResponse(message);
-      break;
-    case "joinResponse":
-      _joinResponse(message);
-      break;
-    case "receiveResponse":
-      _receiveResponse(message);
+    case "startCommunication":
+      _handleStartCommunication(message);
       break;
     case "stopCommunication":
-      _dispose();
+      _handleStopCommunication();
+      break;
+    case "connectResponse":
+      _handleConnectResponse(message);
       break;
     case "knightJoined":
-      _knightJoined(message);
+      _handleKnightJoined(message);
       break;
     case "knightLeft":
-      _knightLeft(message);
+      _handleKnightLeft(message);
       break;
     case "changeSource":
-      _changeSource(message);
+      _handleChangeSource(message);
       break;
     case "seatsUpdated":
-      _seatsUpdated(message);
+      _handleSeatsUpdated(message);
       break;
     case "iceCandidate":
-      _iceCandidate(message);
+      _handleIceCandidate(message);
       break;
     case "error":
       console.error(`Error: ${message.message}`);
+      _handleError(message);
       break;
     default:
       console.error(`Unrecognized message: ${message.id}`);
   }
 });
 
+// utils
 const _setPeer = ({ source, webRtcPeer }) => {
   _webRtcPeers[source] = webRtcPeer;
 };
 
 const _sendMessage = (message) => {
   _socket.send(message);
+};
+
+const _connect = ({ source, videoRef }) => {
+  let webRtcPeer = null;
+  const options = {
+    onIceCandidate: (candidate) =>
+      _sendMessage({ id: "onIceCandidate", source, candidate }),
+  };
+  const connectCallback = function (error) {
+    if (error) return console.error(error);
+    this.generateOffer((error, sdpOffer) => {
+      if (error) return console.error(error);
+
+      console.info("Invoking SDP offer callback function ");
+      _sendMessage({ id: "connect", source, sdpOffer });
+    });
+  };
+
+  if (source === "me") {
+    options.localVideo = videoRef.current;
+    webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
+      options,
+      connectCallback
+    );
+  } else {
+    options.remoteVideo = videoRef.current;
+    webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
+      options,
+      connectCallback
+    );
+  }
+
+  if (webRtcPeer) _setPeer({ source, webRtcPeer });
 };
 
 const _disposePeer = (source) => {
@@ -85,62 +117,32 @@ const _dispose = () => {
   _webRtcPeers = {};
 };
 
-const _iceCandidate = (message) => {
-  _webRtcPeers[message.source].addIceCandidate(message.candidate);
+// signal handlers
+const _handleStartCommunication = (message) => {
+  if (typeof _onMeetingStarted === "function")
+    _onMeetingStarted(message.self, message.table);
 };
 
-const _reserveResponse = (message) => {
-  if (message.response !== "success") {
-    const error = message.error ? message.error : "Unknow error";
-    console.info(`Create table failed for the following reason: `, error);
-    _dispose();
-  } else {
-    _webRtcPeers["me"].processAnswer(message.sdpAnswer);
-    if (typeof _onMeetingStarted === "function")
-      _onMeetingStarted(message.self, message.table);
-  }
+const _handleStopCommunication = () => {
+  _dispose();
 };
 
-const _joinResponse = (message) => {
+const _handleConnectResponse = (message) => {
   if (message.response !== "success") {
     const error = message.error ? message.error : "Unknow error";
-    console.info(`Join table failed for the following reason: `, error);
-    _dispose();
-  } else {
-    _webRtcPeers["me"].processAnswer(message.sdpAnswer);
-    if (typeof _onMeetingStarted === "function")
-      _onMeetingStarted(message.self, message.table);
-  }
-};
-
-const _receiveResponse = (message) => {
-  if (message.response !== "success") {
-    const error = message.error ? message.error : "Unknow error";
-    console.info(`Receive failed for the following reason: `, error);
+    console.info(`Connect failed for the following reason: `, error);
     _disposePeer(message.source);
   } else {
     _webRtcPeers[message.source].processAnswer(message.sdpAnswer);
   }
 };
 
-const _changeSource = (message) => {
-  if (typeof _onSourceChanged === "function") _onSourceChanged(message.source);
-};
-
-const _seatsUpdated = (message) => {
-  if (typeof _onSeatsUpdated === "function")
-    _onSeatsUpdated({
-      seats: message.seats,
-      numberOfSeats: message.numberOfSeats,
-    });
-};
-
-const _knightJoined = (message) => {
+const _handleKnightJoined = (message) => {
   if (typeof _onKnightJoined === "function")
     _onKnightJoined({ knight: message.knight, seatNumber: message.seatNumber });
 };
 
-const _knightLeft = (message) => {
+const _handleKnightLeft = (message) => {
   if (typeof _onKnightLeft === "function")
     _onKnightLeft({
       knight: message.knight,
@@ -149,53 +151,40 @@ const _knightLeft = (message) => {
     });
 };
 
+const _handleChangeSource = (message) => {
+  if (typeof _onSourceChanged === "function") _onSourceChanged(message.source);
+};
+
+const _handleSeatsUpdated = (message) => {
+  if (typeof _onSeatsUpdated === "function")
+    _onSeatsUpdated({
+      seats: message.seats,
+      numberOfSeats: message.numberOfSeats,
+    });
+};
+
+const _handleIceCandidate = (message) => {
+  _webRtcPeers[message.source].addIceCandidate(message.candidate);
+};
+
+const _handleError = (message) => {
+  if (typeof _onError === "function")
+    _onError({ message: message.message, error: message.error });
+};
+
+// services
+const reserve = ({ numberOfSeats, name }) => {
+  _sendMessage({ id: "reserve", numberOfSeats, name });
+};
+
 const join = ({ seatNumber, name }) => {
   if (!seatNumber) return;
-
-  const options = {
-    localVideo: _localVideoRef.current,
-    onIceCandidate: (candidate) =>
-      _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
-  };
-
-  _webRtcPeers["me"] = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
-    options,
-    function (error) {
-      if (error) return console.error(error);
-      this.generateOffer((error, sdpOffer) => {
-        if (error) return console.error(error);
-
-        console.info("Invoking SDP offer callback function ");
-        _sendMessage({ id: "join", seatNumber, name, sdpOffer });
-      });
-    }
-  );
+  _sendMessage({ id: "join", seatNumber, name });
 };
 
 const leave = () => {
   _sendMessage({ id: "leave" });
   _dispose();
-};
-
-const reserve = ({ numberOfSeats, name }) => {
-  const options = {
-    localVideo: _localVideoRef.current,
-    onIceCandidate: (candidate) =>
-      _sendMessage({ id: "onIceCandidate", source: "me", candidate }),
-  };
-
-  _webRtcPeers["me"] = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
-    options,
-    function (error) {
-      if (error) return console.error(error);
-      this.generateOffer((error, sdpOffer) => {
-        if (error) return console.error(error);
-
-        console.info("Invoking SDP offer callback function ");
-        _sendMessage({ id: "reserve", numberOfSeats, name, sdpOffer });
-      });
-    }
-  );
 };
 
 const changeSource = (source) => {
@@ -217,7 +206,7 @@ export const useRoundTable = ({
   onMeetingStopped,
   onSourceChanged,
   onSeatsUpdated,
-  localVideoRef,
+  onError,
 }) => {
   useEffect(() => {
     if (typeof onKnightJoined === "function") _onKnightJoined = onKnightJoined;
@@ -229,8 +218,7 @@ export const useRoundTable = ({
     if (typeof onSourceChanged === "function")
       _onSourceChanged = onSourceChanged;
     if (typeof onSeatsUpdated === "function") _onSeatsUpdated = onSeatsUpdated;
-
-    if (localVideoRef) _localVideoRef = localVideoRef;
+    if (typeof onError === "function") _onError = onError;
   }, [
     onKnightJoined,
     onKnightLeft,
@@ -238,7 +226,7 @@ export const useRoundTable = ({
     onMeetingStopped,
     onSourceChanged,
     onSeatsUpdated,
-    localVideoRef,
+    onError,
   ]);
 
   return {
@@ -260,29 +248,19 @@ export const Video = ({ source, ...props }) => {
   // }
 
   useEffect(() => {
-    const options = {
-      remoteVideo: videoRef.current,
-      onIceCandidate: (candidate) =>
-        _sendMessage({ id: "onIceCandidate", source, candidate }),
-    };
-
-    const webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
-      options,
-      function (error) {
-        if (error) return console.error(error);
-        this.generateOffer((error, sdpOffer) => {
-          if (error) return console.error(error);
-          console.info("Invoking SDP offer callback function ");
-          _sendMessage({ id: "receive", source, sdpOffer });
-        });
-      }
-    );
-    _setPeer({ source, webRtcPeer });
+    _connect({ source, videoRef });
 
     return () => {
       _disposePeer(source);
     };
   }, [source]);
 
-  return <video ref={videoRef} autoPlay muted {...props} controls />;
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      {...props}
+      style={source === "me" ? { transform: "rotateY(180deg)" } : null}
+    />
+  );
 };
