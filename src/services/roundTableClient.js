@@ -14,7 +14,7 @@ let _onSeatsUpdated = null;
 let _onError = null;
 
 // connect with signal server
-const _socket = io(server({ debug: "local" }));
+const _socket = io(server({ debug: "online" }));
 
 _socket.on("connect", () => {
   if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
@@ -239,7 +239,7 @@ export const useRoundTable = ({
   };
 };
 
-export const Video = ({ source, ...props }) => {
+export const Video = ({ source, style, ...props }) => {
   const videoRef = useRef(null);
 
   // function playPause() {
@@ -260,7 +260,9 @@ export const Video = ({ source, ...props }) => {
       ref={videoRef}
       autoPlay
       {...props}
-      style={source === "me" ? { transform: "rotateY(180deg)" } : null}
+      style={
+        source === "me" ? { ...style, transform: "rotateY(180deg)" } : style
+      }
     />
   );
 };
