@@ -1,13 +1,13 @@
 import React from "react";
 import { Segment } from "semantic-ui-react";
-import { Video } from "../services/roundTableClient";
+import { VideoView } from "../round-table-client";
 
 const renderVideos = (table) => {
   const temp = [];
   for (const knightId in table.knights) {
     if (table.self.id !== knightId)
       temp.push(
-        <Video key={knightId} source={knightId} style={{ width: "100%" }} />
+        <VideoView key={knightId} source={knightId} style={{ width: "100%" }} />
       );
   }
   return temp;
@@ -18,12 +18,12 @@ const VideoViews = ({ table }) => {
     <Segment>
       <div style={{ display: "flex" }}>
         <div style={{ width: "75%", position: "relative" }}>
-          <Video
+          <VideoView
             key="dispatcher"
             source="dispatcher"
             style={{ width: "100%" }}
           />
-          <Video
+          <VideoView
             key="self"
             source="self"
             style={{ width: "33.3%", position: "absolute", top: 0, left: 0 }}

@@ -4,10 +4,6 @@ import ReactDOM from "react-dom";
 import App from "./App";
 import * as serviceWorker from "./serviceWorker";
 
-import { setDebugMode } from "./configs/server";
-
-setDebugMode("remote");
-
 ReactDOM.render(
   <React.StrictMode>
     <App />

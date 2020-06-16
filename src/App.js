@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Container } from "semantic-ui-react";
-import { useRoundTable } from "./services/roundTableClient";
+import { useRoundTable } from "./round-table-client";
 
 import StartPanel from "./components/StartPanel";
 import TableControl from "./components/TableControl";
@@ -9,7 +9,7 @@ const App = () => {
   const [table, setTable] = useState(null);
 
   // Round Table listeners
-  const onMeetingStarted = useCallback((self, table) => {
+  const onMeetingStarted = useCallback(({ self, table }) => {
     setTable({ ...table, self });
   }, []);
 
@@ -47,7 +47,7 @@ const App = () => {
     });
   }, []);
 
-  const onSourceChanged = useCallback((source) => {
+  const onSourceChanged = useCallback(({ source }) => {
     setTable((table) => ({ ...table, source }));
   }, []);
 
@@ -73,9 +73,10 @@ const App = () => {
   });
 
   // TableControl handlers
-  const handleChangeSource = (source) => changeSource(source);
-  const handleKickout = (seatNumber) => kickout(seatNumber);
-  const handleGenerateSeats = (numberOfSeats) => generateSeats(numberOfSeats);
+  const handleChangeSource = (source) => changeSource({ source });
+  const handleKickout = (seatNumber) => kickout({ seatNumber });
+  const handleGenerateSeats = (numberOfSeats) =>
+    generateSeats({ numberOfSeats });
   const handleLeave = () => leave();
 
   return (
@@ -91,7 +92,7 @@ const App = () => {
       ) : (
         <StartPanel
           handleReserveTable={() => {
-            reserve({});
+            reserve();
           }}
           handleJoinTable={(seatNumber) => {
             join({ seatNumber });
