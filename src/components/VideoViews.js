@@ -24,8 +24,8 @@ const VideoViews = ({ table }) => {
             style={{ width: "100%" }}
           />
           <Video
-            key="me"
-            source="me"
+            key="self"
+            source="self"
             style={{ width: "33.3%", position: "absolute", top: 0, left: 0 }}
           />
         </div>

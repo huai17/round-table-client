@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import io from "socket.io-client";
 import kurentoUtils from "kurento-utils";
-import server from "../configs/server";
+import { getSeverAddress } from "../configs/server";
 
 let _webRtcPeers = {};
 let _onServerConnected = null;
@@ -14,47 +14,14 @@ let _onSeatsUpdated = null;
 let _onError = null;
 
 // connect with signal server
-const _socket = io(server({ debug: "online" }));
+const _socket = io(getSeverAddress());
 
 _socket.on("connect", () => {
-  if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
+  _handleConnectEvent();
 });
 
 _socket.on("message", (message) => {
-  console.log(`Receive message: ${message.id}`);
-
-  switch (message.id) {
-    case "startCommunication":
-      _handleStartCommunication(message);
-      break;
-    case "stopCommunication":
-      _handleStopCommunication();
-      break;
-    case "connectResponse":
-      _handleConnectResponse(message);
-      break;
-    case "knightJoined":
-      _handleKnightJoined(message);
-      break;
-    case "knightLeft":
-      _handleKnightLeft(message);
-      break;
-    case "changeSource":
-      _handleChangeSource(message);
-      break;
-    case "seatsUpdated":
-      _handleSeatsUpdated(message);
-      break;
-    case "iceCandidate":
-      _handleIceCandidate(message);
-      break;
-    case "error":
-      console.error(`Error: ${message.message}`);
-      _handleError(message);
-      break;
-    default:
-      console.error(`Unrecognized message: ${message.id}`);
-  }
+  _handleMessageEvent(message);
 });
 
 // utils
@@ -63,7 +30,10 @@ const _setPeer = ({ source, webRtcPeer }) => {
 };
 
 const _sendMessage = (message) => {
-  _socket.send(message);
+  if (_socket) {
+    console.log(`Send Message: ${message.id}`);
+    _socket.send(message);
+  }
 };
 
 const _connect = ({ source, videoRef }) => {
@@ -82,7 +52,7 @@ const _connect = ({ source, videoRef }) => {
     });
   };
 
-  if (source === "me") {
+  if (source === "self") {
     options.localVideo = videoRef.current;
     webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
       options,
@@ -118,6 +88,46 @@ const _dispose = () => {
 };
 
 // signal handlers
+const _handleConnectEvent = () => {
+  if (typeof _onServerConnected === "function") _onServerConnected(_socket.id);
+};
+
+const _handleMessageEvent = (message) => {
+  console.log(`Receive message: ${message.id}`);
+
+  switch (message.id) {
+    case "startCommunication":
+      _handleStartCommunication(message);
+      break;
+    case "stopCommunication":
+      _handleStopCommunication();
+      break;
+    case "connectResponse":
+      _handleConnectResponse(message);
+      break;
+    case "knightJoined":
+      _handleKnightJoined(message);
+      break;
+    case "knightLeft":
+      _handleKnightLeft(message);
+      break;
+    case "changeSource":
+      _handleChangeSource(message);
+      break;
+    case "seatsUpdated":
+      _handleSeatsUpdated(message);
+      break;
+    case "iceCandidate":
+      _handleIceCandidate(message);
+      break;
+    case "error":
+      _handleError(message);
+      break;
+    default:
+      console.error(`Unrecognized message: ${message.id}`);
+  }
+};
+
 const _handleStartCommunication = (message) => {
   if (typeof _onMeetingStarted === "function")
     _onMeetingStarted(message.self, message.table);
@@ -168,6 +178,7 @@ const _handleIceCandidate = (message) => {
 };
 
 const _handleError = (message) => {
+  console.error(`Error: ${message.message}`);
   if (typeof _onError === "function")
     _onError({ message: message.message, error: message.error });
 };
@@ -261,7 +272,7 @@ export const Video = ({ source, style, ...props }) => {
       autoPlay
       {...props}
       style={
-        source === "me" ? { ...style, transform: "rotateY(180deg)" } : style
+        source === "self" ? { ...style, transform: "rotateY(180deg)" } : style
       }
     />
   );
