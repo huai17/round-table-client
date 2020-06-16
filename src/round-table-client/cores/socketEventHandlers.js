@@ -3,7 +3,7 @@ import {
   processAnswer,
   dispose,
   disposePeer,
-} from "./webRtcPeers";
+} from "./webRtcPeerControls";
 
 /**
  * onServerConnected
@@ -18,9 +18,19 @@ import {
 
 const _eventListeners = {};
 
+const _triggerEvent = (event, ...args) => {
+  if (typeof _eventListeners[event] === "function")
+    _eventListeners[event](...args);
+};
+
+export const setEventListener = (event, listener) => {
+  if (typeof listener === "function") _eventListeners[event] = listener;
+};
+
 export const handleConnectEvent = (_socket) => {
-  if (typeof _eventListeners.onServerConnected === "function")
-    _eventListeners.onServerConnected(_socket.id);
+  _triggerEvent("onServerConnected", {
+    socketId: _socket.id,
+  });
 };
 
 export const handleMessageEvent = (message) => {
@@ -57,15 +67,6 @@ export const handleMessageEvent = (message) => {
     default:
       console.error(`Unrecognized message: ${message.id}`);
   }
-};
-
-export const setEventListener = (event, listener) => {
-  if (typeof listener === "function") _eventListeners[event] = listener;
-};
-
-const _triggerEvent = (event, ...args) => {
-  if (typeof _eventListeners[event] === "function")
-    _eventListeners[event](...args);
 };
 
 const _handleStartCommunication = (message) => {

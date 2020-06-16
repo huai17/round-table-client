@@ -9,9 +9,8 @@ import {
   kickout,
   connectPeer,
   disposePeer,
-} from "./webRtcPeers";
-
-import { setEventListener } from "./eventHandlers";
+  setEventListener,
+} from "../cores";
 
 export const useRoundTable = ({
   onKnightJoined,

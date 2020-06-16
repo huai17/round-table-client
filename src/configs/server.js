@@ -1,4 +1,4 @@
-let _debug = "local";
+let _debug = "remote";
 
 export const getSeverAddress = () => {
   return process.env.NODE_ENV === "production"

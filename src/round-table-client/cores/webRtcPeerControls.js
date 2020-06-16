@@ -1,6 +1,6 @@
 import kurentoUtils from "kurento-utils";
 
-import { sendMessage } from "./signals";
+import { sendMessage } from "./socketConnection";
 
 let _webRtcPeers = {};
 
