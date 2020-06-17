@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 
 import { useKnight } from "../libs/hooks";
 
-const VideoView = ({ source, style, ...props }) => {
+const VideoView = ({ source, isConnected, style, ...props }) => {
   const videoRef = useRef(null);
   const { connectPeer, disposePeer } = useKnight({ source });
 
@@ -12,14 +12,15 @@ const VideoView = ({ source, style, ...props }) => {
   // }
 
   useEffect(() => {
-    connectPeer(videoRef);
+    if (isConnected) connectPeer(videoRef);
     return () => {
       disposePeer();
     };
-  }, [connectPeer, disposePeer]);
+  }, [connectPeer, disposePeer, isConnected]);
 
   return (
     <video
+      poster="https://i.pinimg.com/originals/60/f6/e7/60f6e7294309c3ec67855e35eb1912da.gif"
       ref={videoRef}
       autoPlay
       muted

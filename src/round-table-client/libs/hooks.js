@@ -17,6 +17,7 @@ export const useRoundTable = ({
   onKnightLeft,
   onMeetingStarted,
   onMeetingStopped,
+  onKnightConnected,
   onSourceChanged,
   onSeatsUpdated,
   onError,
@@ -28,6 +29,11 @@ export const useRoundTable = ({
   useEffect(() => {
     if (onKnightLeft) setEventListener("onKnightLeft", onKnightLeft);
   }, [onKnightLeft]);
+
+  useEffect(() => {
+    if (onKnightConnected)
+      setEventListener("onKnightConnected", onKnightConnected);
+  }, [onKnightConnected]);
 
   useEffect(() => {
     if (onMeetingStarted)

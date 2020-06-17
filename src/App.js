@@ -47,6 +47,15 @@ const App = () => {
     });
   }, []);
 
+  const onKnightConnected = useCallback(({ knight }) => {
+    setTable((table) => {
+      const cloneKnights = { ...table.knights };
+      if (!cloneKnights[knight.id]) cloneKnights[knight.id] = knight;
+      cloneKnights[knight.id].isConnected = true;
+      return { ...table, knights: cloneKnights };
+    });
+  }, []);
+
   const onSourceChanged = useCallback(({ source }) => {
     setTable((table) => ({ ...table, source }));
   }, []);
@@ -66,6 +75,7 @@ const App = () => {
   } = useRoundTable({
     onKnightJoined,
     onKnightLeft,
+    onKnightConnected,
     onMeetingStarted,
     onMeetingStopped,
     onSourceChanged,

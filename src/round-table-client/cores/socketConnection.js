@@ -4,7 +4,7 @@ import { getSeverAddress } from "../../configs/server";
 import { handleConnectEvent, handleMessageEvent } from "./socketEventHandlers";
 
 // connect with signal server
-export const socket = io(getSeverAddress());
+export const socket = io(getSeverAddress() + "/roundTable");
 
 socket.on("connect", () => {
   handleConnectEvent(socket);

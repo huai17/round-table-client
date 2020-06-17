@@ -52,6 +52,9 @@ export const handleMessageEvent = (message) => {
     case "knightLeft":
       _handleKnightLeft(message);
       break;
+    case "knightConnected":
+      _handleKnightConnected(message);
+      break;
     case "changeSource":
       _handleChangeSource(message);
       break;
@@ -106,6 +109,12 @@ const _handleKnightLeft = (message) => {
     knight: message.knight,
     seatNumber: message.seatNumber,
     isRemoved: message.isRemoved,
+  });
+};
+
+const _handleKnightConnected = (message) => {
+  _triggerEvent("onKnightConnected", {
+    knight: message.knight,
   });
 };
 

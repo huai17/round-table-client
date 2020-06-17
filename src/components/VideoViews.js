@@ -7,7 +7,12 @@ const renderVideos = (table) => {
   for (const knightId in table.knights) {
     if (table.self.id !== knightId)
       temp.push(
-        <VideoView key={knightId} source={knightId} style={{ width: "100%" }} />
+        <VideoView
+          key={knightId}
+          source={knightId}
+          isConnected={table.knights[knightId].isConnected}
+          style={{ width: "100%" }}
+        />
       );
   }
   return temp;
@@ -21,11 +26,13 @@ const VideoViews = ({ table }) => {
           <VideoView
             key="dispatcher"
             source="dispatcher"
+            isConnected
             style={{ width: "100%" }}
           />
           <VideoView
             key="self"
             source="self"
+            isConnected
             style={{ width: "33.3%", position: "absolute", top: 0, left: 0 }}
           />
         </div>
