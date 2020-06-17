@@ -34,8 +34,6 @@ export const handleConnectEvent = (_socket) => {
 };
 
 export const handleMessageEvent = (message) => {
-  console.log(`Receive message: ${message.id}`);
-
   switch (message.id) {
     case "startCommunication":
       _handleStartCommunication(message);
@@ -64,9 +62,13 @@ export const handleMessageEvent = (message) => {
     case "iceCandidate":
       _handleIceCandidate(message);
       break;
+    case "chat":
+      _handleChat(message);
+      break;
     case "error":
       _handleError(message);
       break;
+
     default:
       console.error(`Unrecognized message: ${message.id}`);
   }
@@ -100,14 +102,12 @@ const _handleConnectResponse = (message) => {
 const _handleKnightJoined = (message) => {
   _triggerEvent("onKnightJoined", {
     knight: message.knight,
-    seatNumber: message.seatNumber,
   });
 };
 
 const _handleKnightLeft = (message) => {
   _triggerEvent("onKnightLeft", {
     knight: message.knight,
-    seatNumber: message.seatNumber,
     isRemoved: message.isRemoved,
   });
 };
@@ -133,6 +133,13 @@ const _handleSeatsUpdated = (message) => {
 
 const _handleIceCandidate = (message) => {
   addIceCandidate({ source: message.source, candidate: message.candidate });
+};
+
+const _handleChat = (message) => {
+  _triggerEvent("onChat", {
+    message: message.message,
+    knight: message.knight,
+  });
 };
 
 const _handleError = (message) => {

@@ -59,16 +59,10 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
       temp.push(
         <List.Item
           key={knightId}
-          icon={table.king.id === knightId ? "chess king" : "chess knight"}
           content={
-            <>
-              <span
-                style={{
-                  color: knightId === table.source ? "green" : undefined,
-                }}
-              >
-                {table.knights[knightId].name}
-              </span>
+            <span>
+              {knightId === table.source ? "🦄" : "🐴"}
+              {table.knights[knightId].name}
               {table.self.id === table.king.id && knightId !== table.source ? (
                 <Button
                   onClick={() => handleChangeSource(knightId)}
@@ -76,7 +70,7 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
                   size="mini"
                 />
               ) : null}
-            </>
+            </span>
           }
         />
       );
@@ -91,16 +85,10 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
       <List>
         <List.Item
           key={table.self.id}
-          icon={table.king.id === table.self.id ? "chess king" : "chess knight"}
           content={
-            <>
-              <span
-                style={{
-                  color: table.self.id === table.source ? "green" : undefined,
-                }}
-              >
-                {table.self.name}
-              </span>
+            <span>
+              {table.self.id === table.source ? "🦄" : "🐴"}
+              {table.self.name}
               {table.self.id === table.king.id &&
               table.self.id !== table.source ? (
                 <Button
@@ -109,7 +97,7 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
                   size="mini"
                 />
               ) : null}
-            </>
+            </span>
           }
         />
         {temp}

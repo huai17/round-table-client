@@ -17,14 +17,14 @@ const App = () => {
     setTable(null);
   }, []);
 
-  const onKnightJoined = useCallback(({ knight, seatNumber }) => {
+  const onKnightJoined = useCallback(({ knight }) => {
     setTable((table) => {
       const cloneKnights = { ...table.knights };
       cloneKnights[knight.id] = knight;
 
-      if (seatNumber && table.seats[seatNumber]) {
+      if (table.seats && table.seats[knight.seatNumber]) {
         const cloneSeats = { ...table.seats };
-        cloneSeats[seatNumber] = knight.id;
+        cloneSeats[knight.seatNumber] = knight.id;
         return { ...table, knights: cloneKnights, seats: cloneSeats };
       }
 
@@ -32,14 +32,14 @@ const App = () => {
     });
   }, []);
 
-  const onKnightLeft = useCallback(({ knight, seatNumber, isRemoved }) => {
+  const onKnightLeft = useCallback(({ knight, isRemoved }) => {
     setTable((table) => {
       const cloneKnights = { ...table.knights };
       delete cloneKnights[knight.id];
 
-      if (seatNumber && table.seats[seatNumber]) {
+      if (table.seats && table.seats[knight.seatNumber]) {
         const cloneSeats = { ...table.seats };
-        cloneSeats[seatNumber] = isRemoved ? "removed" : "available";
+        cloneSeats[knight.seatNumber] = isRemoved ? "removed" : "available";
         return { ...table, knights: cloneKnights, seats: cloneSeats };
       }
 
