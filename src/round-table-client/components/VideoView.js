@@ -22,6 +22,7 @@ const VideoView = ({ source, style, ...props }) => {
     <video
       ref={videoRef}
       autoPlay
+      muted
       {...props}
       style={
         source === "self" ? { ...style, transform: "rotateY(180deg)" } : style
