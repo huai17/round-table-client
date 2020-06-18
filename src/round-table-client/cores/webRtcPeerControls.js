@@ -1,14 +1,19 @@
-import kurentoUtils from "kurento-utils";
+import webRtcUtils from "./webRtcUtils";
 
 import { sendMessage } from "./socketConnections";
 
 let _webRtcPeers = {};
 
+export const getPeer = (options = {}) => {
+  const { source } = options;
+  return _webRtcPeers[source];
+};
+
 export const connectPeer = (options = {}) => {
   const { source, videoRef } = options;
   let webRtcPeer = null;
   const webRtcOptions = {
-    onIceCandidate: (candidate) =>
+    onicecandidate: (candidate) =>
       sendMessage({ id: "onIceCandidate", source, candidate }),
   };
   const connectCallback = function (error) {
@@ -22,18 +27,20 @@ export const connectPeer = (options = {}) => {
   };
   if (source === "self") {
     if (videoRef) webRtcOptions.localVideo = videoRef.current;
-    webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(
+    webRtcPeer = webRtcUtils.WebRtcPeer.WebRtcPeerSendonly(
       webRtcOptions,
       connectCallback
     );
   } else {
     if (videoRef) webRtcOptions.remoteVideo = videoRef.current;
-    webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(
+    webRtcPeer = webRtcUtils.WebRtcPeer.WebRtcPeerRecvonly(
       webRtcOptions,
       connectCallback
     );
   }
   if (webRtcPeer) _webRtcPeers[source] = webRtcPeer;
+
+  return webRtcPeer;
 };
 
 export const disposePeer = (options = {}) => {

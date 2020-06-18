@@ -7,6 +7,7 @@ import {
   changeSource,
   generateSeats,
   kickout,
+  getPeer,
   connectPeer,
   disposePeer,
   setEventListener,
@@ -79,7 +80,12 @@ export const useKnight = ({ source }) => {
     disposePeer({ source });
   }, [source]);
 
+  const _getPeer = useCallback(() => {
+    getPeer({ source });
+  }, [source]);
+
   return {
+    getPeer: _getPeer,
     connectPeer: _connectPeer,
     disposePeer: _disposePeer,
   };

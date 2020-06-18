@@ -26,7 +26,6 @@ const VideoViews = ({ table }) => {
           <VideoView
             key="dispatcher"
             source="dispatcher"
-            isConnected
             style={{ width: "100%" }}
           />
           <div
@@ -38,12 +37,7 @@ const VideoViews = ({ table }) => {
               zIndex: 2,
             }}
           >
-            <VideoView
-              key="self"
-              source="self"
-              isConnected
-              style={{ width: "100%" }}
-            />
+            <VideoView key="self" source="self" style={{ width: "100%" }} />
           </div>
         </div>
         <div style={{ width: "25%" }}>{renderVideos(table)}</div>

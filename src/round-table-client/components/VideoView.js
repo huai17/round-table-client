@@ -12,7 +12,8 @@ const VideoView = ({ source, isConnected, style, ...props }) => {
   // }
 
   useEffect(() => {
-    if (isConnected) connectPeer(videoRef);
+    if (isConnected || source === "self" || source === "dispatcher")
+      connectPeer(videoRef);
     return () => {
       disposePeer();
     };
