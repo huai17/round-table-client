@@ -17,7 +17,7 @@ const VideoView = ({ source, isConnected, style, ...props }) => {
     return () => {
       disposePeer();
     };
-  }, [connectPeer, disposePeer, isConnected]);
+  }, [connectPeer, disposePeer, isConnected, source]);
 
   return (
     <video
