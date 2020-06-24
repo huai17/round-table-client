@@ -1,9 +1,13 @@
 import "semantic-ui-css/semantic.min.css";
-import "webrtc-adapter";
 import React from "react";
 import ReactDOM from "react-dom";
 import App from "./App";
 import * as serviceWorker from "./serviceWorker";
+
+import { RoundTable } from "./react-round-table";
+import { getSeverAddress } from "./configs/server";
+
+RoundTable.connect(getSeverAddress({ debug: "remote" }));
 
 ReactDOM.render(
   <React.StrictMode>

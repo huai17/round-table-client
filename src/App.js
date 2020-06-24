@@ -1,20 +1,36 @@
 import React, { useState, useCallback } from "react";
 import { Container } from "semantic-ui-react";
-import { useRoundTable } from "./round-table-client";
+import { useRoundTable } from "./react-round-table";
 
 import StartPanel from "./components/StartPanel";
 import TableControl from "./components/TableControl";
 
 const App = () => {
   const [table, setTable] = useState(null);
+  const [streams, setStreams] = useState({});
+
+  const { connectPC, closePC } = useRoundTable();
 
   // Round Table listeners
-  const onMeetingStarted = useCallback(({ self, table }) => {
-    setTable({ ...table, self });
-  }, []);
+  const onMeetingStarted = useCallback(
+    ({ self, table }) => {
+      setTable({ ...table, self });
+
+      for (const knightId in table.knights) {
+        connectPC({
+          source: self.id === knightId ? "self" : knightId,
+          onStreamReady: ({ stream }) => {
+            setStreams((streams) => ({ ...streams, [knightId]: stream }));
+          },
+        });
+      }
+    },
+    [connectPC]
+  );
 
   const onMeetingStopped = useCallback(() => {
     setTable(null);
+    setStreams({});
   }, []);
 
   const onKnightJoined = useCallback(({ knight }) => {
@@ -32,29 +48,47 @@ const App = () => {
     });
   }, []);
 
-  const onKnightLeft = useCallback(({ knight, isRemoved }) => {
-    setTable((table) => {
-      const cloneKnights = { ...table.knights };
-      delete cloneKnights[knight.id];
+  const onKnightLeft = useCallback(
+    ({ knight, isRemoved }) => {
+      setTable((table) => {
+        const cloneKnights = { ...table.knights };
+        delete cloneKnights[knight.id];
 
-      if (table.seats && table.seats[knight.seatNumber]) {
-        const cloneSeats = { ...table.seats };
-        cloneSeats[knight.seatNumber] = isRemoved ? "removed" : "available";
-        return { ...table, knights: cloneKnights, seats: cloneSeats };
-      }
+        if (table.seats && table.seats[knight.seatNumber]) {
+          const cloneSeats = { ...table.seats };
+          cloneSeats[knight.seatNumber] = isRemoved ? "removed" : "available";
+          return { ...table, knights: cloneKnights, seats: cloneSeats };
+        }
 
-      return { ...table, knights: cloneKnights };
-    });
-  }, []);
+        return { ...table, knights: cloneKnights };
+      });
+      setStreams((streams) => {
+        const newStreams = { ...streams };
+        delete newStreams[knight.id];
+        return newStreams;
+      });
+      closePC({ source: knight.id });
+    },
+    [closePC]
+  );
 
-  const onKnightConnected = useCallback(({ knight }) => {
-    setTable((table) => {
-      const cloneKnights = { ...table.knights };
-      if (!cloneKnights[knight.id]) cloneKnights[knight.id] = knight;
-      cloneKnights[knight.id].isConnected = true;
-      return { ...table, knights: cloneKnights };
-    });
-  }, []);
+  const onKnightConnected = useCallback(
+    ({ knight }) => {
+      setTable((table) => {
+        const cloneKnights = { ...table.knights };
+        if (!cloneKnights[knight.id]) cloneKnights[knight.id] = knight;
+        cloneKnights[knight.id].isConnected = true;
+        return { ...table, knights: cloneKnights };
+      });
+      connectPC({
+        source: knight.id,
+        onStreamReady: ({ stream }) => {
+          setStreams((streams) => ({ ...streams, [knight.id]: stream }));
+        },
+      });
+    },
+    [connectPC]
+  );
 
   const onSourceChanged = useCallback(({ source }) => {
     setTable((table) => ({ ...table, source }));
@@ -65,14 +99,7 @@ const App = () => {
   }, []);
 
   // Round Table
-  const {
-    join,
-    leave,
-    reserve,
-    changeSource,
-    generateSeats,
-    kickout,
-  } = useRoundTable({
+  useRoundTable({
     onKnightJoined,
     onKnightLeft,
     onKnightConnected,
@@ -82,32 +109,12 @@ const App = () => {
     onSeatsUpdated,
   });
 
-  // TableControl handlers
-  const handleChangeSource = (source) => changeSource({ source });
-  const handleKickout = (seatNumber) => kickout({ seatNumber });
-  const handleGenerateSeats = (numberOfSeats) =>
-    generateSeats({ numberOfSeats });
-  const handleLeave = () => leave();
-
   return (
     <Container>
       {table ? (
-        <TableControl
-          handleChangeSource={handleChangeSource}
-          handleKickout={handleKickout}
-          handleGenerateSeats={handleGenerateSeats}
-          handleLeave={handleLeave}
-          table={table}
-        />
+        <TableControl table={table} streams={streams} />
       ) : (
-        <StartPanel
-          handleReserveTable={() => {
-            reserve();
-          }}
-          handleJoinTable={(seatNumber) => {
-            join({ seatNumber });
-          }}
-        />
+        <StartPanel />
       )}
     </Container>
   );

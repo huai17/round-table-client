@@ -7,9 +7,11 @@ import {
   Header,
   Icon,
 } from "semantic-ui-react";
+import { useRoundTable } from "../react-round-table";
 
-const StartPanel = ({ handleReserveTable, handleJoinTable }) => {
+const StartPanel = () => {
   const [seatNumber, setSeatNumber] = useState("");
+  const { reserve, join } = useRoundTable();
 
   return (
     <Segment textAlign="center" color="teal" inverted>
@@ -28,9 +30,7 @@ const StartPanel = ({ handleReserveTable, handleJoinTable }) => {
             <Button
               content="Join Table"
               size="big"
-              onClick={() => {
-                handleJoinTable(seatNumber);
-              }}
+              onClick={() => join({ seatNumber })}
             />
           }
         />
@@ -41,9 +41,7 @@ const StartPanel = ({ handleReserveTable, handleJoinTable }) => {
           content="Reserve Table"
           icon="signup"
           size="big"
-          onClick={() => {
-            handleReserveTable();
-          }}
+          onClick={() => reserve()}
         />
       </Segment>
     </Segment>

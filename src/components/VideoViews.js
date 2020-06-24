@@ -1,46 +1,91 @@
 import React from "react";
 import { Segment } from "semantic-ui-react";
-import { VideoView } from "../round-table-client";
+import { VideoView } from "../react-round-table";
 
-const renderVideos = (table) => {
+const renderVideos = ({ table, streams }) => {
   const temp = [];
   for (const knightId in table.knights) {
     if (table.self.id !== knightId)
       temp.push(
-        <VideoView
+        <div
           key={knightId}
-          source={knightId}
-          isConnected={table.knights[knightId].isConnected}
-          style={{ width: "100%" }}
-        />
+          style={{
+            width: "100%",
+            position: "relative",
+            height: 0,
+            paddingTop: "100%",
+            backgroundColor: "#000",
+          }}
+        >
+          <VideoView
+            stream={streams[knightId]}
+            style={{
+              width: "100%",
+              height: "100%",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              objectFit: "contain",
+            }}
+          />
+        </div>
       );
   }
   return temp;
 };
 
-const VideoViews = ({ table }) => {
+const VideoViews = ({ table, streams }) => {
   return (
     <Segment>
-      <div style={{ display: "flex" }}>
-        <div style={{ width: "75%", position: "relative" }}>
+      <div style={{ display: "flex", position: "relative" }}>
+        <div
+          style={{
+            width: "75%",
+            height: 0,
+            paddingTop: "75%",
+            backgroundColor: "#000",
+            position: "relative",
+          }}
+        >
           <VideoView
-            key="dispatcher"
-            source="dispatcher"
-            style={{ width: "100%" }}
-          />
-          <div
+            key="host"
+            stream={streams[table.source]}
             style={{
-              width: "33.3%",
+              width: "100%",
+              height: "100%",
               position: "absolute",
               top: 0,
               left: 0,
-              zIndex: 2,
+              objectFit: "contain",
             }}
-          >
-            <VideoView key="self" source="self" style={{ width: "100%" }} />
-          </div>
+          />
         </div>
-        <div style={{ width: "25%" }}>{renderVideos(table)}</div>
+        <div
+          style={{
+            width: "25%",
+            height: 0,
+            paddingTop: "25%",
+            backgroundColor: "#000",
+            position: "absolute",
+            top: 0,
+            left: 0,
+          }}
+        >
+          <VideoView
+            key="self"
+            mirror
+            stream={streams[table.self.id]}
+            style={{
+              width: "100%",
+              height: "100%",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              objectFit: "contain",
+            }}
+          />
+        </div>
+        <div style={{ width: "25%" }}>{renderVideos({ table, streams })}</div>
       </div>
     </Segment>
   );

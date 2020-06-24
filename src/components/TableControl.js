@@ -1,8 +1,11 @@
 import React from "react";
 import { Segment, Button, Header, Icon, List } from "semantic-ui-react";
-import VideoViews from "./VideoViews";
+import { useRoundTable } from "../react-round-table";
 
-const renderSeats = ({ table, handleKickout }) => {
+import VideoViews from "./VideoViews";
+import ChatRoom from "./ChatRoom";
+
+const renderSeats = ({ table, kickout }) => {
   if (!table.seats) return null;
 
   const temp = [];
@@ -30,7 +33,7 @@ const renderSeats = ({ table, handleKickout }) => {
                 </span>
 
                 <Button
-                  onClick={() => handleKickout(seatNumber)}
+                  onClick={() => kickout({ seatNumber })}
                   content="Kick Out"
                   size="mini"
                 />
@@ -51,7 +54,7 @@ const renderSeats = ({ table, handleKickout }) => {
   );
 };
 
-const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
+const renderKnights = ({ table, changeSource }) => {
   const temp = [];
 
   for (const knightId in table.knights) {
@@ -65,7 +68,7 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
               {table.knights[knightId].name}
               {table.self.id === table.king.id && knightId !== table.source ? (
                 <Button
-                  onClick={() => handleChangeSource(knightId)}
+                  onClick={() => changeSource({ source: knightId })}
                   content="Change Source"
                   size="mini"
                 />
@@ -92,7 +95,7 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
               {table.self.id === table.king.id &&
               table.self.id !== table.source ? (
                 <Button
-                  onClick={() => handleChangeSource(table.self.id)}
+                  onClick={() => changeSource({ source: table.self.id })}
                   content="Change Source"
                   size="mini"
                 />
@@ -106,37 +109,36 @@ const renderKnights = ({ table, handleChangeSource, handleKickout }) => {
   );
 };
 
-const TableControl = ({
-  handleChangeSource,
-  handleKickout,
-  handleGenerateSeats,
-  handleLeave,
-  table,
-}) => (
-  <Segment textAlign="center" color="teal" inverted>
-    <Header size="huge">
-      <Icon name="chess knight" /> Round Table
-    </Header>
-    <Segment>
-      {renderSeats({ table, handleKickout })}
-      {renderKnights({ table, handleChangeSource, handleKickout })}
-      {table.self.id === table.king.id ? (
+const TableControl = ({ table, streams }) => {
+  const { generateSeats, leave, changeSource, kickout } = useRoundTable();
+
+  return (
+    <Segment textAlign="center" color="teal" inverted>
+      <Header size="huge">
+        <Icon name="chess knight" /> Round Table
+      </Header>
+      <Segment>
+        {renderSeats({ table, kickout })}
+        {renderKnights({ table, changeSource })}
+        {table.self.id === table.king.id ? (
+          <Button
+            onClick={() => generateSeats()}
+            content="Generate Seat"
+            size="large"
+          />
+        ) : null}
         <Button
-          onClick={() => handleGenerateSeats()}
-          content="Generate Seat"
+          onClick={() => leave()}
+          content={
+            table.self.id === table.king.id ? "Release Table" : "Leave Table"
+          }
           size="large"
         />
-      ) : null}
-      <Button
-        onClick={() => handleLeave()}
-        content={
-          table.self.id === table.king.id ? "Release Table" : "Leave Table"
-        }
-        size="large"
-      />
-      <VideoViews table={table} />
+        <VideoViews table={table} streams={streams} />
+        <ChatRoom />
+      </Segment>
     </Segment>
-  </Segment>
-);
+  );
+};
 
 export default TableControl;
