@@ -1,12 +1,5 @@
-import React, { useState } from "react";
-import {
-  Button,
-  Segment,
-  Divider,
-  Input,
-  Header,
-  Icon,
-} from "semantic-ui-react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Button, Input, List, Segment } from "semantic-ui-react";
 import { useRoundTable } from "../react-round-table";
 
 const ChatBox = () => {
@@ -29,37 +22,83 @@ const ChatBox = () => {
       onKeyPress={(event) => {
         if (event.key !== "Enter") return;
         event.preventDefault();
-        if (value) {
-          send();
-        }
+        value && send();
       }}
-      action={<Button content="Send" size="big" onClick={() => send()} />}
+      action={
+        <Button content="Send" size="big" onClick={() => value && send()} />
+      }
     />
   );
 };
 
-const renderChat = (chatList) => {
-  return chatList.map((chat) => (
-    <div key={chat.knight.id + chat.id}>
-      {chat.knight.name}: {chat.message}
-    </div>
-  ));
+const ChatList = ({ chatList }) => {
+  const end = useRef(null);
+
+  useEffect(() => {
+    chatList.length && end.current.scrollIntoView({ behavior: "smooth" });
+  }, [chatList]);
+
+  return (
+    <List relaxed style={{ height: 200, overflowY: "auto" }}>
+      {chatList}
+      <div ref={end}></div>
+    </List>
+  );
 };
 
-const ChatRoom = () => {
+const ChatRoom = ({ selfId }) => {
   const [chatList, setChatList] = useState([]);
 
-  useRoundTable({
-    onChatReceived: (message) => {
-      setChatList((chatList) => [...chatList, message]);
+  const onChatReceived = useCallback(
+    ({ id, message, knight }) => {
+      setChatList((chatList) => [
+        ...chatList,
+        <List.Item key={knight.id + id}>
+          <List.Header style={selfId === knight.id ? { color: "green" } : null}>
+            {knight.name}
+          </List.Header>
+          <List.Description>{message}</List.Description>
+        </List.Item>,
+      ]);
     },
+    [selfId]
+  );
+
+  const onKnightJoined = useCallback(({ knight }) => {
+    setChatList((chatList) => [
+      ...chatList,
+      <List.Item
+        key={knight.id + new Date().toDateString()}
+        style={{ color: "#ABB2B9" }}
+      >
+        {knight.name} Joind
+      </List.Item>,
+    ]);
+  }, []);
+
+  const onKnightLeft = useCallback(({ knight }) => {
+    setChatList((chatList) => [
+      ...chatList,
+      <List.Item
+        key={knight.id + new Date().toDateString()}
+        style={{ color: "#ABB2B9" }}
+      >
+        {knight.name} Left
+      </List.Item>,
+    ]);
+  }, []);
+
+  useRoundTable({
+    onChatReceived,
+    onKnightJoined,
+    onKnightLeft,
   });
 
   return (
-    <>
+    <Segment textAlign="left">
+      <ChatList chatList={chatList} />
       <ChatBox />
-      {renderChat(chatList)}
-    </>
+    </Segment>
   );
 };
 

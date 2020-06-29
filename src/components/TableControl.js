@@ -135,7 +135,7 @@ const TableControl = ({ table, streams }) => {
           size="large"
         />
         <VideoViews table={table} streams={streams} />
-        <ChatRoom />
+        <ChatRoom selfId={table.self.id} />
       </Segment>
     </Segment>
   );
